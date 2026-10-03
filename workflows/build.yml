@@ -1,0 +1,37 @@
+name: build-apk
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Ecrire la liste des Wi-Fi (secret WIFI_LIST)
+        env:
+          WIFI_LIST: ${{ secrets.WIFI_LIST }}
+        run: |
+          mkdir -p app/src/main/assets
+          printf '%s\n' "$WIFI_LIST" > app/src/main/assets/reseaux.txt
+          echo "Réseaux dans la liste : $(grep -cv '^\s*$' app/src/main/assets/reseaux.txt || true)"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wifi-lunettes-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
